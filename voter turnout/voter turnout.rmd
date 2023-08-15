@@ -1,0 +1,321 @@
+---
+title: "voter turnout"
+output: html_document
+date: "2023-01-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(stats)
+library(skimr)
+library(readr)
+library(dplyr)
+voterfile <- read_csv("C:/Users/16169/Downloads/voterfile.zip")
+```
+
+```{r}
+# 2-Way Cross Tabulation
+library(gmodels)
+CrossTable(voterfile$party, voterfile$vh14p)
+CrossTable(voterfile$party, voterfile$vh12p)
+CrossTable(voterfile$party, voterfile$vh10p)
+CrossTable(voterfile$party, voterfile$vh08p)
+CrossTable(voterfile$party, voterfile$vh06p)
+CrossTable(voterfile$party, voterfile$vh04p)
+CrossTable(voterfile$party, voterfile$vh02p)
+CrossTable(voterfile$party, voterfile$vh00p)
+CrossTable(voterfile$party, voterfile$vh12g)
+CrossTable(voterfile$party, voterfile$vh10g)
+CrossTable(voterfile$party, voterfile$vh08g)
+CrossTable(voterfile$party, voterfile$vh06g)
+CrossTable(voterfile$party, voterfile$vh04g)
+CrossTable(voterfile$party, voterfile$vh02g)
+CrossTable(voterfile$party, voterfile$vh00g)
+
+```
+```{r}
+
+skim(voterfile)
+
+#predicting college degree
+voterfile$degree<-if_else (voterfile$education %in% c("Bach Degree - Extremely Likely","Bach Degree - Likely","Grad Degree - Extremely Likely","Grad Degree - Likely "), "yes", if_else(voterfile$education == "nan", "nan", "no"))
+
+#Non-traditional marriage showed little predictive difference as compared to being married so both are encoded as yes
+voterfile$married<-if_else(voterfile$maritalstatus=="nan",0,1)
+#Since there are so few known third party renters, lumping them in with unknown
+voterfile$known_home_owner<-if_else(voterfile$home_owner_or_renter=="Likely Homeowner",1,0)
+#little difference between having a degree and not but important whether it is known
+voterfile$degree_known<-if_else(voterfile$degree=="nan",0,1)
+```
+
+```{r}
+voterfile$vh02g <- factor(voterfile$vh02g)
+voterfile$vh04p <- factor(voterfile$vh04p)
+voterfile$vh04g <- factor(voterfile$vh04g)
+voterfile$vh06p<- factor(voterfile$vh06p)
+
+
+voterold<-voterfile%>%filter(age>22)
+mylogit <- glm(vh02g ~ vh04p+vh04g+vh06p, data = voterfile, family = "binomial")
+summary(mylogit)
+```
+
+```{r}
+voterold$vh02g <- factor(voterold$vh02g)
+voterold$vh04p <- factor(voterold$vh04p)
+voterold$vh04g <- factor(voterold$vh04g)
+voterold$vh06p<- factor(voterold$vh06p)
+voterold$vh06g<- factor(voterold$vh06g)
+mylogitv2 <- glm(vh02g ~ vh04p+vh04g+vh06p+vh06g, data = voterold, family = "binomial")
+```
+```{r}
+summary(mylogitv2)
+```
+
+```{r}
+mylogitv3 <- glm(vh02g ~ vh04p+vh04g+vh06g, data = voterold, family = "binomial")
+```
+```{r}
+summary(mylogitv3)
+```
+
+```{r}
+mylogitv4 <- glm(vh02g ~ vh04p+vh04g+vh06g+age, data = voterold, family = "binomial")
+```
+```{r}
+summary(mylogitv4)
+```
+
+```{r}
+mylogitv5 <- glm(vh02g ~ vh04p+vh04g+vh06g+age+party, data = voterold, family = "binomial")
+```
+
+```{r}
+summary(mylogitv5)
+table(voterold["party"])
+```
+
+
+
+```{r}
+vf2<-voterold%>%filter(party %in% c("Republican","Democratic"))
+
+vf3<-voterold %>%filter(party %in% c("American Independent","Green","Libertarian","Natural Law", "Non-Partisan", "Other " ))
+vf2
+vf3
+```
+
+```{r}
+twopartyv1 <- glm(vh02g ~ vh04p+vh04g+vh06g, data = vf2, family = "binomial")
+
+summary(twopartyv1)
+```
+
+```{r}
+twopartyv2 <- glm(vh02g ~ vh04p+vh04g+vh06g+age, data = vf2, family = "binomial")
+
+summary(twopartyv2)
+```
+
+```{r}
+twopartyv3 <- glm(vh02g ~ vh04p+vh04g+vh06g+age+party, data = vf2, family = "binomial")
+
+summary(twopartyv3)
+```
+
+
+```{r}
+altv1<-glm(vh02g ~ vh04p+vh04g+vh06g+party+age, data = vf3, family = "binomial")
+summary(altv1)
+```
+
+```{r}
+altv2<-glm(vh02g ~ vh04p+vh04g+vh06g+age, data = vf3, family = "binomial")
+summary(altv2)
+#This appears to be a superior model for each. The effect of primary voting is far different for non-major party voters requiring seperate models but once two party and third party voters require similar models. I don't expect to see anything significant with other factors but could be surprised.
+```
+
+```{r}
+twopartyv3 <- glm(vh02g ~ vh04p+vh04g+vh06g+ethnicity, data = vf2, family = "binomial")
+
+summary(twopartyv3)
+#ethinicity has no predictive value
+```
+
+```{r}
+table(voterold["maritalstatus"])
+table(voterold["dwellingtype"])
+table(voterold["income"])
+table(voterold["education"])
+
+twopartyv4 <- glm(vh02g ~ vh04p+vh04g+vh06g+age+maritalstatus, data = vf2, family = "binomial")
+twopartyv5 <- glm(vh02g ~ vh04p+vh04g+vh06g+age+dwellingtype, data = vf2, family = "binomial")
+twopartyv6 <- glm(vh02g ~ vh04p+vh04g+vh06g+age+income, data = vf2, family = "binomial")
+twopartyv7 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age, data = vf2, family = "binomial")
+summary(twopartyv4)
+summary(twopartyv5)
+summary(twopartyv6)
+summary(twopartyv7)
+##v7 has all variables quite significant so keep
+```
+
+```{r}
+
+#Testing degree since all variables so important want original model nearby
+altv3<-glm(vh02g ~ vh04p+vh04g+vh06g+age+degree, data = vf3, family = "binomial")
+summary(altv3)
+altv2<-glm(vh02g ~ vh04p+vh04g+vh06g+age, data = vf3, family = "binomial")
+summary(altv2)
+```
+
+```{r}
+twopartyv8 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+maritalstatus, data = vf2, family = "binomial")
+summary(twopartyv8)
+twopartyv9 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married, data = vf2, family = "binomial")
+summary(twopartyv9)
+#using created variable married which counts non-traditional
+```
+```{r}
+altv3<-glm(vh02g ~ vh04p+vh04g+vh06g+age+degree, data = vf3, family = "binomial")
+summary(altv3)
+altv4<-glm(vh02g ~ vh04p+vh04g+vh06g+age+degree+married, data = vf3, family = "binomial")
+summary(altv4)
+```
+
+```{r}
+twopartyv9.1 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married+petowner_dog, data = vf2, family = "binomial")
+twopartyv9.2 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married+intrst_nascar_in_hh, data = vf2, family = "binomial")
+twopartyv9.3 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married+intrst_musical_instruments_in_hh, data = vf2, family = "binomial")
+twopartyv9.4 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married+donates_to_liberal_causes, data = vf2, family = "binomial")
+twopartyv9.5 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married+donates_to_conservative_causes, data = vf2, family = "binomial")
+twopartyv9.6 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married+home_owner_or_renter, data = vf2, family = "binomial")
+
+summary(twopartyv9.1)
+summary(twopartyv9.2)
+summary(twopartyv9.3)
+summary(twopartyv9.4)
+summary(twopartyv9.5)
+summary(twopartyv9.6)
+summary(twopartyv9)
+#As expected most of these variables do not add any value to the model at this point, but somewhat surprisingly homeowner status does. It does make sense that people in the more stable position of owning their home would be more likely to vote.
+```
+
+```{r}
+altv4<-glm(vh02g ~ vh04p+vh04g+vh06g+age+degree+married, data = vf3, family = "binomial")
+summary(altv4)
+altv5<-glm(vh02g ~ vh04p+vh04g+vh06g+age+degree+married+home_owner_or_renter, data = vf3, family = "binomial")
+summary(altv5)
+table(vf3["home_owner_or_renter"])
+altv6<-glm(vh02g ~ vh04p+vh04g+vh06g+age+degree+married+known_home_owner, data = vf3, family = "binomial")
+summary(altv6)
+```
+
+```{r}
+#Out of sample comparison
+vf2.1<-vf2%>%filter(age>26)
+check2 <- glm(vh06g ~ vh08p+vh08g+vh10g+degree+age+married+home_owner_or_renter, data = vf2.1, family = "binomial")
+twopartyv9.6.1 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married+home_owner_or_renter, data = vf2.1, family = "binomial")
+summary(check2)
+summary(twopartyv9.6.1)
+summary(twopartyv9.6)
+
+```
+
+```{r}
+twopartyv9.6.2 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+married+known_home_owner, data = vf2.1, family = "binomial")
+
+check2.2 <- glm(vh06g ~ vh08p+vh08g+vh10g+degree+married+known_home_owner, data = vf2.1, family = "binomial")
+summary(check2.2)
+summary(twopartyv9.6.2)
+```
+
+```{r}
+twopartyv9.6.2 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+married, data = vf2.1, family = "binomial")
+
+check2.2 <- glm(vh06g ~ vh08p+vh08g+vh10g+degree+married, data = vf2.1, family = "binomial")
+summary(check2.2)
+summary(twopartyv9.6.2)
+```
+
+
+```{r}
+twopartyv9.6.3 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree_known+married, data = vf2.1, family = "binomial")
+
+check2.3 <- glm(vh06g ~ vh08p+vh08g+vh10g+degree_known+married, data = vf2.1, family = "binomial")
+summary(check2.3)
+summary(twopartyv9.6.3)
+```
+
+```{r}
+vf2.1$y<-(-.6)+.85*vf2.1$vh08p+1.75*vf2.1$vh08g+1.14*vf2.1$vh10g+.50*vf2.1$degree_known+.54*vf2.1$married
+
+vf2.1$predict<-exp(vf2.1$y)/(1+exp(vf2.1$y)) 
+```
+
+```{r}
+quantile(vf2.1$predict,probs=c(.05,.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9,.95))
+```
+
+```{r}
+#My model would grossly overpredict turnout in 06
+CrossTable(vf2.1$predict, vf2.1$vh06g)
+```
+
+```{r}
+#Out of sample comparison
+vf3.1<-vf3%>%filter(age>26)
+check3 <- glm(vh06g ~ vh08p+vh08g+vh10g+degree+age+married+home_owner_or_renter, data = vf3.1, family = "binomial")
+twopartyv9.6.1 <- glm(vh02g ~ vh04p+vh04g+vh06g+degree+age+married+home_owner_or_renter, data = vf2.1, family = "binomial")
+summary(check2)
+summary(twopartyv9.6.1)
+summary(twopartyv9.6)
+
+```
+
+```{r}
+altvfinal <- glm(vh02g ~ vh04p+vh04g+vh06g+degree_known+married, data = vf3.1, family = "binomial")
+
+check3.3 <- glm(vh06g ~ vh08p+vh08g+vh10g+degree_known+married, data = vf3.1, family = "binomial")
+summary(check3.3)
+summary(altvfinal)
+```
+
+
+```{r}
+vf3.1$y<-(-.7)+.62*vf3.1$vh08p+1.91*vf3.1$vh08g+1.03*vf3.1$vh10g+.53*vf3.1$degree_known+.58*vf3.1$married
+
+vf3.1$predict<-exp(vf3.1$y)/(1+exp(vf3.1$y)) 
+```
+
+
+```{r}
+
+CrossTable(vf3.1$predict, vf3.1$vh06g)
+```
+
+```{r}
+vf2f<-voterfile %>%filter(party %in% c("Republican","Democratic"))%>%select(c("optimus_id","vh08p","vh08g","vh10g","degree_known","married"))
+
+vf3f <-voterfile %>%filter((!party %in% c("Republican","Democratic")))%>% select(c("optimus_id","vh08p","vh08g","vh10g","degree_known","married"))
+
+vf2f$vote_prob<-exp((-.6)+.85*vf2f$vh08p+1.75*vf2f$vh08g+1.14*vf2f$vh10g+.50*vf2f$degree_known+.54*vf2f$married)/(1+exp((-.6)+.85*vf2f$vh08p+1.75*vf2f$vh08g+1.14*vf2f$vh10g+.50*vf2f$degree_known+.54*vf2f$married))
+
+vf3f$vote_prob<-exp((-.7)+.62*vf3f$vh08p+1.91*vf3f$vh08g+1.03*vf3f$vh10g+.53*vf3f$degree_known+.58*vf3f$married)/(1+exp((-.7)+.62*vf3f$vh08p+1.91*vf3f$vh08g+1.03*vf3f$vh10g+.53*vf3f$degree_known+.58*vf3f$married))
+```
+
+```{r}
+vf2f$vote<-round(vf2f$vote_prob)
+vf3f$vote<-round(vf3f$vote_prob)
+votepredict<-rbind(vf2f,vf3f)
+write_csv(votepredict,file="C:\\Users\\16169\\Downloads\\votepredict.csv")
+```
+
+
+
+
+
+
+
+
